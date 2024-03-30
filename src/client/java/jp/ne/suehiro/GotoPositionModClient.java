@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 
@@ -15,6 +16,7 @@ public class GotoPositionModClient implements ClientModInitializer {
     private double targetX = 100; // 目標位置のX座標
     private double targetZ = 200; // 目標位置のZ座標
     private boolean isDisplaying = false; // 表示フラグ
+    private PlayerEntity targetPlayer = null;
 
     @Override
     public void onInitializeClient() {
@@ -26,30 +28,59 @@ public class GotoPositionModClient implements ClientModInitializer {
         // コマンドを登録
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("gotoposition")
-                    .executes(context -> {
-                        // 引数なしの場合、表示を解除
-                        setDisplaying(false);
-                        context.getSource().sendFeedback(Text.literal("目標位置の表示を解除しました"));
-                        return 1;
-                    })
-                    .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument("x", DoubleArgumentType.doubleArg())
-                            .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument("z", DoubleArgumentType.doubleArg())
-                                    .executes(context -> {
-                                        double x = DoubleArgumentType.getDouble(context, "x");
-                                        double z = DoubleArgumentType.getDouble(context, "z");
-                                        setTargetPosition(x, z);
-                                        setDisplaying(true);
-                                        context.getSource().sendFeedback(Text.literal("目標位置を (" + x + ", " + z + ") に設定しました"));
-                                        return 1;
-                                    }))));
+                .executes(context -> {
+                    // 引数なしの場合、表示を解除
+                    setDisplaying(false);
+                    context.getSource().sendFeedback(Text.literal("目標位置の表示を解除しました"));
+                    return 1;
+                })
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument("x", DoubleArgumentType.doubleArg())
+                        .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument("z", DoubleArgumentType.doubleArg())
+                                .executes(context -> {
+                                    double x = DoubleArgumentType.getDouble(context, "x");
+                                    double z = DoubleArgumentType.getDouble(context, "z");
+                                    setTargetPosition(x, z);
+                                    setDisplaying(true);
+                                    context.getSource().sendFeedback(Text.literal("目標位置を (" + x + ", " + z + ") に設定しました"));
+                                    return 1;
+                                }))));
+            dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("gotouser")
+                .executes(context -> {
+                    // 引数なしの場合、表示を解除
+                    setDisplaying(false);
+                    setTargetPlayer(null);
+                    context.getSource().sendFeedback(Text.literal("プレイヤーのトラッキングを解除しました"));
+                    return 1;
+                })
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument("player", EntityArgumentType.player())
+                        .executes(context -> {
+                            MinecraftClient client = MinecraftClient.getInstance();
+                            PlayerEntity player = client.player;
+                            setTargetPlayer(player);
+                            setDisplaying(true);
+                            context.getSource().sendFeedback(Text.literal(player.getDisplayName().getString() + " のトラッキングを開始しました"));
+                            return 1;
+                        })));
         });
     }
 
     public void onRenderGameOverlay(DrawContext drawContext) {
-        if (!isDisplaying) return; // 表示フラグがfalseの場合、描画をスキップ
+        if (!isDisplaying || targetPlayer == null) return; // 表示フラグがfalseの場合、描画をスキップ
+            
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (targetPlayer != null) {
+            try {
+                targetX = targetPlayer.getX();
+                targetZ = targetPlayer.getZ();
+            } catch (Exception e) {
+                setDisplaying(false);
+                setTargetPlayer(null);
+                client.player.sendMessage(Text.literal("ユーザの座標取得に失敗しました"), false);
+                return;
+            }
+        }
 
         // プレイヤーの現在位置と向きを取得
-        MinecraftClient client = MinecraftClient.getInstance();
         PlayerEntity player = client.player;
         double playerX = player.getX();
         double playerZ = player.getZ();
@@ -109,5 +140,10 @@ public class GotoPositionModClient implements ClientModInitializer {
 
     private void setDisplaying(boolean displaying) {
         isDisplaying = displaying;
+    }
+    
+    private void setTargetPlayer(PlayerEntity player) {
+        targetPlayer = player;
+        setDisplaying(true);
     }
 }
