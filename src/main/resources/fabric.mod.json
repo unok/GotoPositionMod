@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "goto-position-mod",
+	"version": "${version}",
+	"name": "Goto Position Mod",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/goto-position-mod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"jp.ne.suehiro.GotoPositionMod"
+		],
+		"client": [
+			"jp.ne.suehiro.GotoPositionModClient"
+		]
+	},
+	"mixins": [
+		"goto-position-mod.mixins.json",
+		{
+			"config": "goto-position-mod.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.15.7",
+		"minecraft": "~1.20.4",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
