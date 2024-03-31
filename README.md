@@ -44,7 +44,7 @@ Modがインストールされた状態でMinecraftを起動します。
 このModは、`GotoPositionModClient`クラスを中心に構築されています。このクラスは`ClientModInitializer`インターフェースを実装しており、Modの初期化処理を担当しています。
 
 ## ライセンス
-このModは[MITライセンス](LICENSE)の下で公開されています。
+このModは[CC 1.0 Universal](LICENSE)の下で公開されています。
 
 ## コントリビューション
 このプロジェクトへの貢献を歓迎します。バグ報告、機能提案、プルリクエストなど、お気軽にご連絡ください
