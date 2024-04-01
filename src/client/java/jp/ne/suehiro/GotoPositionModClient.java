@@ -4,19 +4,19 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 public class GotoPositionModClient implements ClientModInitializer {
     private double targetX = 100; // 目標位置のX座標
     private double targetZ = 200; // 目標位置のZ座標
     private boolean isDisplaying = false; // 表示フラグ
-    private PlayerEntity targetPlayer = null;
 
     @Override
     public void onInitializeClient() {
@@ -29,47 +29,40 @@ public class GotoPositionModClient implements ClientModInitializer {
         // コマンドを登録
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("gotoposition")
-                    .executes(context -> {
-                        // 引数なしの場合、表示を解除
-                        setDisplaying(false);
-                        context.getSource().sendFeedback(Text.literal("目標位置の表示を解除しました"));
-                        return 1;
-                    })
+                .executes(context -> {
+                    // 引数なしの場合、表示を解除
+                    setDisplaying(false);
+                    context.getSource().sendFeedback(Text.literal("目標位置の表示を解除しました"));
+                    return 1;
+                })
+                .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
+                    .argument("x", DoubleArgumentType.doubleArg())
                     .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
-                            .argument("x", DoubleArgumentType.doubleArg())
-                            .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
-                                    .argument("z", DoubleArgumentType.doubleArg())
-                                    .executes(context -> {
-                                        double x = DoubleArgumentType.getDouble(context, "x");
-                                        double z = DoubleArgumentType.getDouble(context, "z");
-                                        setTargetPosition(x, z);
-                                        setDisplaying(true);
-                                        context.getSource()
-                                                .sendFeedback(Text.literal("目標位置を (" + x + ", " + z + ") に設定しました"));
-                                        return 1;
-                                    }))));
-            dispatcher.register(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal("gotouser")
-                    .executes(context -> {
-                        // 引数なしの場合、表示を解除
-                        setDisplaying(false);
-                        context.getSource().sendFeedback(Text.literal("プレイヤーのトラッキングを解除しました"));
-                        return 1;
-                    })
-                    .then(net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
-                            .argument("player", EntityArgumentType.player())
-                            .executes(context -> {
-                                PlayerEntity player = context.getSource().getPlayer();
-                                if (player != null) {
-                                    setTargetPlayer(player);
-                                    setDisplaying(true);
-                                    context.getSource().sendFeedback(
-                                            Text.literal(player.getDisplayName().getString() + " のトラッキングを開始しました"));
-                                } else {
-                                    context.getSource().sendFeedback(Text.literal("プレイヤーが見つかりませんでした"));
-                                    setDisplaying(false);
-                                }
-                                return 1;
-                            })));
+                        .argument("z", DoubleArgumentType.doubleArg())
+                        .executes(context -> {
+                            double x = DoubleArgumentType.getDouble(context, "x");
+                            double z = DoubleArgumentType.getDouble(context, "z");
+                            setTargetPosition(x, z);
+                            setDisplaying(true);
+                            context.getSource()
+                                .sendFeedback(Text.literal("目標位置を (" + x + ", " + z + ") に設定しました"));
+                            return 1;
+                        })
+                    )
+                )
+            );
+        });
+            
+        ClientPlayNetworking.registerGlobalReceiver(new Identifier("goto-position-mod", "player_position_packet"), (client, handler, buf, responseSender) -> {
+            // サーバーから送信された座標を読み取る
+            double x = buf.readDouble();
+            double z = buf.readDouble();
+            // メインスレッドで実行するためのスケジュール
+            client.execute(() -> {
+                // 受信した座標を設定し、HUDの表示を有効にする
+                setTargetPosition(x, z);
+                setDisplaying(true);
+            });
         });
     }
 
@@ -78,16 +71,6 @@ public class GotoPositionModClient implements ClientModInitializer {
             return; // 表示フラグがfalseの場合、描画をスキップ
 
         MinecraftClient client = MinecraftClient.getInstance();
-        if (targetPlayer != null) {
-            try {
-                targetX = targetPlayer.getX();
-                targetZ = targetPlayer.getZ();
-            } catch (Exception e) {
-                setDisplaying(false);
-                client.player.sendMessage(Text.literal("ユーザの座標取得に失敗しました"), false);
-                return;
-            }
-        }
 
         // プレイヤーの現在位置と向きを取得
         PlayerEntity player = client.player;
@@ -156,12 +139,6 @@ public class GotoPositionModClient implements ClientModInitializer {
         if (!displaying) {
             targetX = 0;
             targetZ = 0;
-            targetPlayer = null;
         }
-    }
-
-    private void setTargetPlayer(PlayerEntity player) {
-        targetPlayer = player;
-        setDisplaying(true);
     }
 }
