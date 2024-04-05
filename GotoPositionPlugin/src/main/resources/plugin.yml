@@ -1,0 +1,11 @@
+name: GotoPositionPlugin
+version: 1.0
+main: jp.ne.suehiro.GotoPositionPlugin
+api-version: 1.20
+commands:
+  gotouser:
+    description: 指定したプレイヤーの座標を送信します
+    usage: /gotouser <username>
+  gotonamedobject:
+    description: 指定した名前のオブジェクトの座標を送信します
+    usage: /gotonamedobject <objectname>
