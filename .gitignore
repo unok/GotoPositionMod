@@ -20,9 +20,9 @@ classes/
 
 .settings/
 .vscode/
-bin/
-.classpath
-.project
+fabricMod/bin/
+fabricMod/.classpath
+fabricMod/.project
 
 # macos
 
@@ -30,7 +30,7 @@ bin/
 
 # fabric
 
-run/
+fabricMod/run/
 
 # java
 

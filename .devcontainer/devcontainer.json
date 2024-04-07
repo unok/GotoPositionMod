@@ -11,7 +11,15 @@
 			"installMaven": "true",
 			"installGradle": "true"
 		}
-	}
+	},
+
+    "mounts": [
+        "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind"
+    ],
+
+    "runArgs": [
+        "-v", "${localEnv:HOME}/.ssh:/root/.ssh"
+    ]
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
