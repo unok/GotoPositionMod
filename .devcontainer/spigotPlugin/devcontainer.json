@@ -1,0 +1,31 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/java
+{
+  "name": "Java",
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "11",
+      "installMaven": "true",
+      "installGradle": "true"
+    },
+    "ghcr.io/devcontainers/features/java-language-server:1": {}
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind"
+  ],
+
+  "runArgs": ["-v", "${localEnv:HOME}/.ssh:/root/.ssh"],
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "vscjava.vscode-maven"],
+      "settings": {
+        "java.project.sourcePaths": ["src"],
+        "java.configuration.maven.userSettings": "spigotPlugin/pom.xml",
+        "java.configuration.updateBuildConfiguration": "interactive"
+      }
+    }
+  }
+}

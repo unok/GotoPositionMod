@@ -5,6 +5,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.Location;
+import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -16,6 +18,7 @@ import java.util.Map;
 public class GotoPositionPlugin extends JavaPlugin {
     private Map<Player, Player> targetPlayers = new HashMap<>();
     private Map<Player, Entity> targetEntities = new HashMap<>();
+    private Map<Player, Location> targetPositions = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -40,7 +43,7 @@ public class GotoPositionPlugin extends JavaPlugin {
                 Player targetPlayer = Bukkit.getPlayer(username);
                 if (targetPlayer != null) {
                     targetPlayers.put(userPlayer, targetPlayer);
-                    userPlayer.sendMessage("プレイヤーの座標を送信しました");
+                    userPlayer.sendMessage("プレイヤーの座標を設定しました");
                     sendPlayerPositionPacket(userPlayer);
                 } else {
                     userPlayer.sendMessage("プレイヤーが見つかりませんでした");
@@ -62,14 +65,27 @@ public class GotoPositionPlugin extends JavaPlugin {
                 }
                 if (targetEntity != null) {
                     targetEntities.put(userPlayer, targetEntity);
-                    userPlayer.sendMessage("指定した名前のオブジェクトを見つけました");
+                    userPlayer.sendMessage("指定した名前のオブジェクトを設定しました");
                     sendNamedObjectPositionPacket(userPlayer);
                 } else {
                     userPlayer.sendMessage("指定した名前のオブジェクトが見つかりませんでした");
                 }
             }
             return true;
+        } else if (command.getName().equalsIgnoreCase("gotoposition")) {
+            if (args.length != 2) {
+                targetPositions.remove(userPlayer);
+                userPlayer.sendMessage("ターゲット座標の設定を解除しました");
+            } else {
+                double targetX = Double.parseDouble(args[0]);
+                double targetZ = Double.parseDouble(args[1]);
+                Location targetLocation = new Location(Bukkit.getWorlds().get(0), targetX, 0, targetZ);
+                userPlayer.sendMessage("指定された座標を設定しました");
+                sendPositionPacket(userPlayer);
+            }
+            return true;
         }
+
         return false;
     }
 
@@ -85,8 +101,6 @@ public class GotoPositionPlugin extends JavaPlugin {
                     return;
                 }
                 updateTitleForPlayer(userPlayer);
-                userPlayer.sendMessage(String.format("%.2f,%.2f", targetPlayer.getLocation().getX(),
-                        targetPlayer.getLocation().getZ()));
             }
         }.runTaskTimer(this, 0, 20);
     }
@@ -102,11 +116,27 @@ public class GotoPositionPlugin extends JavaPlugin {
                     cancel();
                     return;
                 }
-                userPlayer.sendMessage(String.format("%.2f,%.2f", targetEntity.getLocation().getX(),
-                        targetEntity.getLocation().getZ()));
+                updateTitleForEntity(userPlayer);
             }
         }.runTaskTimer(this, 0, 20);
     }
+
+    private void sendPositionPacket(Player userPlayer) {
+        Location targetLocation = targetPositions.get(userPlayer);
+        if (targetLocation == null)
+            return;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!targetPositions.containsKey(userPlayer)) {
+                    cancel();
+                    return;
+                }
+                updateTitleForPosition(userPlayer);
+            }
+        }.runTaskTimer(this, 0, 20);
+    }
+
 
     public void updateTitleForPlayer(Player userPlayer) {
         Player targetPlayer = targetPlayers.get(userPlayer);
@@ -125,6 +155,16 @@ public class GotoPositionPlugin extends JavaPlugin {
         // 目標位置との角度を計算
         updateDisplay(userPlayer, targetEntity.getLocation().getX(), targetEntity.getLocation().getZ());
     }
+
+    public void updateTitleForPosition(Player userPlayer) {
+        Location targetLocation = targetPositions.get(userPlayer);
+        if (targetLocation == null)
+            return;
+
+        // 目標位置との角度を計算
+        updateDisplay(userPlayer, targetLocation.getX(), targetLocation.getZ());
+    }
+
 
     private void updateDisplay(Player userPlayer, double targetX, double targetZ) {
         double playerX = userPlayer.getLocation().getX();
@@ -149,25 +189,28 @@ public class GotoPositionPlugin extends JavaPlugin {
         // 角度差を表示
         int leftArrows = 0;
         int rightArrows = 0;
-        String color = "#CCCCCC";
+        ChatColor color = ChatColor.GRAY;
         // 角度差が小さいほどarrowの増加率を大きくする
         if (angleDifference < 0) {
             leftArrows = getArrowCount(angleDifference);
-            color = "#0000FF";
+            color = ChatColor.BLUE;
         } else {
             rightArrows = getArrowCount(angleDifference);
-            color = "#FF0000";
+            color = ChatColor.RED;
         }
         String angleText = String.format("%12s Angle: %6.1f° %-12s", "<".repeat(leftArrows), angleDifference,
                 ">".repeat(rightArrows));
 
-        // スコアボードにメッセージと距離を設定
+        // スコアボードにメッセージと距離を更新または設定
         Objective objective = userPlayer.getScoreboard().getObjective("GotoPosition");
         if (objective == null) {
             objective = userPlayer.getScoreboard().registerNewObjective("GotoPosition", "dummy", "GotoPosition");
+        } else {
+            userPlayer.getScoreboard().clearSlot(DisplaySlot.SIDEBAR);
         }
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.getScore("<" + color + ">" + angleText + "</color>").setScore((int) distance);
+        Score score = objective.getScore(color + angleText); // スコアを取得
+        score.setScore((int) distance); // スコアを設定
     }
 
     private int getArrowCount(double angleDifference) {
