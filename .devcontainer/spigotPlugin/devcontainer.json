@@ -9,8 +9,7 @@
       "version": "11",
       "installMaven": "true",
       "installGradle": "true"
-    },
-    "ghcr.io/devcontainers/features/java-language-server:1": {}
+    }
   },
 
   "mounts": [
