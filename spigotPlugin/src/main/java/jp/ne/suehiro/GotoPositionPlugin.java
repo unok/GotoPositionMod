@@ -9,8 +9,10 @@ import org.bukkit.Location;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -204,11 +206,10 @@ public class GotoPositionPlugin extends JavaPlugin {
         // スコアボードにメッセージと距離を更新または設定
         Objective objective = userPlayer.getScoreboard().getObjective("GotoPosition");
         if (objective == null) {
-            objective = userPlayer.getScoreboard().registerNewObjective("GotoPosition", "dummy", "GotoPosition");
-        } else {
-            userPlayer.getScoreboard().clearSlot(DisplaySlot.SIDEBAR);
+            Criteria criteria = Criteria.DUMMY;
+            objective = userPlayer.getScoreboard().registerNewObjective("GotoPosition", criteria, "GotoPosition");
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         }
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         Score score = objective.getScore(color + angleText); // スコアを取得
         score.setScore((int) distance); // スコアを設定
     }
